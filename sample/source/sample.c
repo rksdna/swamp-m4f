@@ -45,22 +45,12 @@ static struct data data_2 = {"thread 2", 10, 30};
 static struct thread thread_fpu;
 static u8_t stack_fpu[1024];
 
-static u32_t gpsr()
-{
-    u32_t psr;
-    asm volatile ("mrs %0, control\n" : "=r" (psr) : : );
-    return psr;
-}
-
-#include "stm32/core.h"
-
 static void blink(struct data *data)
 {
     u32_t count = data->count;
     struct timer timer;
 
     debug("%s: hello\n", data->name);
-    debug("%s: control %x\n", data->name, gpsr());
 
     start_timer(&timer, data->interval);
     while (count--)
@@ -76,18 +66,17 @@ static void blink(struct data *data)
 static void blink_fpu(void)
 {
     u32_t count = 0;
-    int x = 50;
+    float x = 50.0f;
     struct timer timer;
 
     debug("fpu: hello\n");
-    debug("fpu: control %x\n", gpsr());
 
-    start_timer(&timer, 100);
-    while (x > 1)
+    start_timer(&timer, 50);
+    while (x > 1.0f)
     {
-        x = x / 2;
+        x = x / 1.2f;
         wait_timer(&timer);
-        debug("fpu: count {%d %d}\n", count++, (int)x);
+        debug("fpu: count {%d %d}\n", count++, (int)(x * 10));
     }
 
     stop_timer(&timer);
@@ -100,7 +89,6 @@ void main(void)
 
     startup_board_401();
     debug("main: hello\n");
-    debug("main: control %x\n", gpsr());
 
     debug("[%s] [%2s] [%6s] [%*s]\n", "abcd", "abcd", "abcd", 5, "abcd");
     debug("[%d] [%d] [%d] [%4d] [%12d] [%*d]\n", 0, 1, -1, 654321, 654321, 9, 654321);
@@ -113,15 +101,14 @@ void main(void)
     start_thread(&thread_2, (function_t)blink, &data_2, stack_2, sizeof(stack_2));
     start_thread(&thread_fpu, (function_t)blink_fpu, 0, stack_fpu, sizeof(stack_fpu));
 
-    int x = 0;
-    while (x < 2)
+    float x = 0.1f;
+    while (x < 2.0f)
     {
-        x += 0;
-
+        x += 0.1f;
         debug("main: count {%d %d}\n", count++, (int)(10 * x));
-        sleep(50);
+        sleep(70);
     }
 
     debug("main: bue\n");
-    sleep(10000);
+    sleep(1000);
 }
