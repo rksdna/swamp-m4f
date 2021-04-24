@@ -37,6 +37,8 @@ struct flash
     volatile u32_t OPTCR1;
 };
 
+#define DES ((struct flash *)0x40023C00)
+
 #define FLASH_ACR_LATENCY ((u32_t)0x0000000F)
 #define FLASH_ACR_LATENCY_0WS ((u32_t)0x00000000)
 #define FLASH_ACR_LATENCY_1WS ((u32_t)0x00000001)
