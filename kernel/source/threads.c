@@ -43,22 +43,7 @@ struct context
     u32_t R10;
     u32_t R11;
 
-    u32_t S16;
-    u32_t S17;
-    u32_t S18;
-    u32_t S19;
-    u32_t S20;
-    u32_t S21;
-    u32_t S22;
-    u32_t S23;
-    u32_t S24;
-    u32_t S25;
-    u32_t S26;
-    u32_t S27;
-    u32_t S28;
-    u32_t S29;
-    u32_t S30;
-    u32_t S31;
+    u32_t R14;
 
     u32_t R0;
     u32_t R1;
@@ -68,25 +53,6 @@ struct context
     u32_t LR;
     u32_t PC;
     u32_t PSR;
-
-    u32_t S0;
-    u32_t S1;
-    u32_t S2;
-    u32_t S3;
-    u32_t S4;
-    u32_t S5;
-    u32_t S6;
-    u32_t S7;
-    u32_t S8;
-    u32_t S9;
-    u32_t S10;
-    u32_t S11;
-    u32_t S12;
-    u32_t S13;
-    u32_t S14;
-    u32_t S15;
-    u32_t FPSCR;
-    u32_t RESERVED;
 };
 
 struct fault
@@ -196,22 +162,22 @@ void fault_handler(void)
     {
         static const struct fault faults[] =
         {
-            {SCB_CFSR_MSTKERR, "Exception stacking violation"},
-            {SCB_CFSR_MUNSTKERR, "Exception unstacking violation"},
-            {SCB_CFSR_DACCVIOL, "Data access violation"},
-            {SCB_CFSR_IACCVIOL, "Instruction access violation"},
-            {SCB_CFSR_STKERR, "Exception stacking bus fault"},
-            {SCB_CFSR_UNSTKERR, "Exception unstacking bus fault"},
-            {SCB_CFSR_IBUSERR, "Instruction prefetch bus fault"},
-            {SCB_CFSR_PRECISERR, "Precise data bus fault"},
-            {SCB_CFSR_IMPRECISERR, "Imprecise data bus fault"},
-            {SCB_CFSR_NOCP, "Coprocessor access"},
-            {SCB_CFSR_UNDEFINSTR, "Undefined instruction"},
-            {SCB_CFSR_INVSTATE, "Enter an invalid instruction set state"},
-            {SCB_CFSR_INVPC, "Invalid EXC_RETURN value"},
-            {SCB_CFSR_UNALIGNED, "Unaligned load or store"},
-            {SCB_CFSR_DIVBYZERO, "Divide by zero"},
-        };
+        {SCB_CFSR_MSTKERR, "Exception stacking violation"},
+        {SCB_CFSR_MUNSTKERR, "Exception unstacking violation"},
+        {SCB_CFSR_DACCVIOL, "Data access violation"},
+        {SCB_CFSR_IACCVIOL, "Instruction access violation"},
+        {SCB_CFSR_STKERR, "Exception stacking bus fault"},
+        {SCB_CFSR_UNSTKERR, "Exception unstacking bus fault"},
+        {SCB_CFSR_IBUSERR, "Instruction prefetch bus fault"},
+        {SCB_CFSR_PRECISERR, "Precise data bus fault"},
+        {SCB_CFSR_IMPRECISERR, "Imprecise data bus fault"},
+        {SCB_CFSR_NOCP, "Coprocessor access"},
+        {SCB_CFSR_UNDEFINSTR, "Undefined instruction"},
+        {SCB_CFSR_INVSTATE, "Enter an invalid instruction set state"},
+        {SCB_CFSR_INVPC, "Invalid EXC_RETURN value"},
+        {SCB_CFSR_UNALIGNED, "Unaligned load or store"},
+        {SCB_CFSR_DIVBYZERO, "Divide by zero"},
+    };
 
         u32_t count = sizeof(faults) / sizeof(struct fault);
         while (count--)
@@ -244,17 +210,28 @@ __attribute__((naked))
 void pending_svc_handler(void)
 {
     asm volatile ("mrs r1, psp\n"
-                  "stmdb r1!, {r4 - r11}\n"
-                  "vstmdb r1!, {s16 - s31}\n"
+
+                  "tst r14, #0x10\n"
+                  "it eq\n"
+                  "vstmdbeq r1!, {s16 - s31}\n"
+
+                  "stmdb r1!, {r4 - r11, r14}\n"
+
                   "ldr r3, =active_thread\n"
-                  "ldr r2, [r3, #0] \n"
+                  "ldr r2, [r3, #0]\n"
                   "str r1, [r2, #0]\n"
+
                   "ldr r4, =shadow_thread\n"
                   "ldr r2, [r4, #0]\n"
                   "str r2, [r3, #0]\n"
                   "ldr r3, [r2, #0]\n"
-                  "vldmia r3!, {s16 - s31}\n"
-                  "ldmia r3!, {r4 - r11}\n"
+
+                  "ldmia r3!, {r4 - r11, r14}\n"
+
+                  "tst r14, #0x10\n"
+                  "it eq\n"
+                  "vldmiaeq r3!, {s16 - s31}\n"
+
                   "msr psp, r3\n"
                   "bx lr\n" : : : );
 }
@@ -276,16 +253,17 @@ void null_handler(void)
 void start_thread(struct thread *thread, function_t function, void *data, void *stack, u32_t size)
 {
     struct context *context = (struct context *)(stack + size - sizeof(struct context));
+    context->R14 = 0xFFFFFFFD;
+
     context->R0 = (u32_t)data;
     context->R1 = 0;
     context->R2 = 0;
     context->R3 = 0;
     context->R12 = 0;
+
     context->PC = (u32_t)function;
     context->LR = (u32_t)exit_handler;
     context->PSR = PSR_T;
-
-    context->FPSCR = 0;
 
     thread->stack = stack + size - sizeof(struct context);
     thread->condition = 0;

@@ -21,10 +21,23 @@
  * THE SOFTWARE.
  */
 
-#ifndef BOARD_H
-#define BOARD_H
+#ifndef DES_H
+#define DES_H
 
-void startup_board_401(void);
-void board_info(void);
+#include <types.h>
+
+struct des
+{
+    const volatile u32_t ID[3];
+    u32_t RESERVED0;
+    const volatile u32_t FSIZE;
+
+};
+
+#define DES ((struct des *)0x1FFF7A10)
+
+#define DES_ID_ID ((u32_t)0xFFFFFFFF)
+
+#define DES_FSIZE_FSIZE ((u32_t)0xFFFF0000)
 
 #endif
