@@ -47,15 +47,16 @@ DEP = $(SRC:.c=.d)
 PREFIX = arm-none-eabi-
 
 CC = $(PREFIX)gcc
-LD = $(PREFIX)ld
+LD = $(PREFIX)gcc
 OC = $(PREFIX)objcopy
 OD = $(PREFIX)objdump
 SZ = $(PREFIX)size
 BS = swamp-boot
 RM = rm -f
 
-CFLAGS = -nostdinc -mcpu=cortex-m4 -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -ffreestanding -Wall -Os -g -MD $(INC) $(DEF)
-LFLAGS = -nostdlib -T $(SCRIPT) -Map $(MAP)
+FLAGS= -mcpu=cortex-m4 -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -ffreestanding -nostdinc -nostdlib -nostartfiles
+CFLAGS = $(FLAGS) -Wall -Os -g -MD $(INC) $(DEF)
+LFLAGS = $(FLAGS) -T $(SCRIPT) -Wl,-Map=$(MAP)
 
 # Targets
 
@@ -74,7 +75,7 @@ $(LST): $(ELF)
 
 $(ELF): $(OBJ)
 	@echo "Linking $(ELF)..."
-	$(LD) $(LFLAGS)  -o $@ $^
+	$(LD) $(LFLAGS)  -o $@ $^ -lgcc
 
 %.o: %.c
 	@ echo "Compiling $@..."
